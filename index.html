@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Nexis Lisp 解释器 v2.0</title>
+	<link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+	<div class="container">
+		<header class="header">
+			<h1><i class="fas fa-code"></i> Nexis Lisp v2.0</h1>
+			<p class="subtitle">现代化的 Lisp 方言解释器</p>
+		</header>
+
+		<div class="content">
+			<div class="repl-container">
+				<div class="repl-header">
+					<i class="fas fa-terminal"></i>
+					<span>交互式 REPL</span>
+					<div class="repl-controls">
+						<button id="clear-btn" title="清除输出">
+							<i class="fas fa-trash"></i>
+						</button>
+						<button id="examples-btn" title="示例代码">
+							<i class="fas fa-list"></i>
+						</button>
+					</div>
+				</div>
+
+				<div class="repl-output" id="output">
+					<div class="output-line welcome">
+						<span class="prompt">Nexis></span>
+						<span class="output-text">欢迎使用 Nexis Lisp v2.0！</span>
+					</div>
+					<div class="output-line welcome">
+						<span class="prompt">Nexis></span>
+						<span class="output-text">输入表达式或点击示例按钮开始。</span>
+					</div>
+				</div>
+
+				<div class="repl-input-container">
+					<div class="input-prompt">Nexis></div>
+					<div class="input-wrapper">
+						<textarea id="input" class="repl-input" placeholder="输入 Nexis 表达式，如 [+ 1 2 3 4]，按 Ctrl+Enter 执行"
+							rows="1" autofocus></textarea>
+						<button id="eval-btn" class="eval-btn" title="执行 (Ctrl+Enter)">
+							<i class="fas fa-play"></i>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<div class="sidebar">
+				<div class="card">
+					<h3><i class="fas fa-info-circle"></i> 语法示例</h3>
+					<div class="example" data-code="[+ 1 2 3 4]">
+						<code>[+ 1 2 3 4]</code>
+						<span>加法（支持多个参数）</span>
+					</div>
+					<div class="example" data-code="[* 2 3 4]">
+						<code>[* 2 3 4]</code>
+						<span>乘法</span>
+					</div>
+					<div class="example" data-code="[+ 10 [- 8 3]]">
+						<code>[+ 10 [- 8 3]]</code>
+						<span>嵌套表达式</span>
+					</div>
+					<div class="example" data-code="[def pi 3.14159]">
+						<code>[def pi 3.14159]</code>
+						<span>定义变量</span>
+					</div>
+					<div class="example" data-code="[def add [fn [x y] [+ x y]]]">
+						<code>[def add [fn [x y] [+ x y]]]</code>
+						<span>定义函数</span>
+					</div>
+					<div class="example" data-code="[cond [[> 5 3] 'greater] [else 'less]]">
+						<code>[cond [[> 5 3] 'greater] [else 'less]]</code>
+						<span>条件判断</span>
+					</div>
+					<!-- 在示例部分添加 -->
+					<div class="example"
+						data-code="[macro unless [condition & body] [q [cond [~condition nil] [else [do ~@body]]]]]">
+						<code>[macro unless ...]</code>
+						<span>定义 unless 宏</span>
+					</div>
+					<div class="example" data-code="[def x 0] [unless [= x 0] [print 'x-not-zero']]">
+						<code>[unless ...]</code>
+						<span>使用 unless 宏</span>
+					</div>
+					<div class="example"
+						data-code="[macro when [condition & body] [q [cond [~condition [do ~@body]] [else nil]]]]">
+						<code>[macro when ...]</code>
+						<span>定义 when 宏</span>
+					</div>
+					<div class="example" data-code="[macro infix [a op b] [q [~op ~a ~b]]]">
+						<code>[macro infix ...]</code>
+						<span>定义中缀宏</span>
+					</div>
+					<div class="example" data-code="[infix 1 + 2]">
+						<code>[infix 1 + 2]</code>
+						<span>使用中缀宏</span>
+					</div>
+					<div class="example"
+						data-code="[macro and [& forms] [if [null? forms] true [if [= [len forms] 1] [first forms] [q [if ~(first forms) [and ~@(rest forms)] false]]]]]">
+						<code>[macro and ...]</code>
+						<span>定义 and 宏</span>
+					</div>
+				</div>
+
+				<div class="card">
+					<h3><i class="fas fa-cogs"></i> 环境状态</h3>
+					<div id="env-display" class="env-display">
+						<div class="env-item">
+							<span class="env-key">+</span>
+							<span class="env-value">内置加法函数</span>
+						</div>
+						<div class="env-item">
+							<span class="env-key">-</span>
+							<span class="env-value">内置减法函数</span>
+						</div>
+						<div class="env-item">
+							<span class="env-key">*</span>
+							<span class="env-value">内置乘法函数</span>
+						</div>
+						<div class="env-item">
+							<span class="env-key">/</span>
+							<span class="env-value">内置除法函数</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<footer class="footer">
+			<p>Nexis Lisp v2.0 - 现代 Lisp 方言实现</p>
+			<p class="features">特性：方括号语法 · 动态作用域 · 交互式 REPL</p>
+		</footer>
+	</div>
+
+	<!-- 加载 JavaScript 文件 -->
+	<script src="parser.js"></script>
+	<script src="evaluator.js"></script>
+	<script src="repl.js"></script>
+	<script src="main.js"></script>
+</body>
+
+</html>
