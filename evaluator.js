@@ -1,4 +1,4 @@
-// evaluator.js - 修正版本
+// evaluator.js - 完整版本，包含模式匹配宏支持
 class Environment {
     constructor(parent = null) {
         this.parent = parent;
@@ -50,7 +50,7 @@ class Evaluator {
         const makeNumericOp = (op) => {
             return (...args) => {
                 if (args.length === 0) {
-                    throw new Error(`${op} 需要至少一个参数`);
+                    throw new Error(`需要至少一个参数`);
                 }
                 return args.reduce(op);
             };
@@ -130,7 +130,6 @@ class Evaluator {
         }
         
         if (typeof expr === 'string') {
-            // 关键修复：字符串可能是符号，需要从环境中获取
             return env.get(expr);
         }
         
@@ -209,6 +208,19 @@ class Evaluator {
             return rest[0];
         }
         
+        if (first === 'while') {
+            const [test, ...body] = rest;
+            let result = null;
+            
+            while (this.eval(test, env)) {
+                for (const expr of body) {
+                    result = this.eval(expr, env);
+                }
+            }
+            
+            return result;
+        }
+        
         if (first === 'macro') {
             const [name, params, body] = rest;
             const macro = {
@@ -227,12 +239,11 @@ class Evaluator {
         // 检查是否是宏
         if (operator && operator.type === 'macro') {
             const macroArgs = rest;
-            const macroEnv = new Environment(operator.env);
-            operator.params.forEach((param, i) => {
-                macroEnv.define(param, macroArgs[i]);
-            });
             
-            const expanded = this.eval(operator.body, macroEnv);
+            // 展开宏
+            const expanded = this.expandMacro(operator, macroArgs);
+            
+            // 求值展开后的表达式
             return this.eval(expanded, env);
         }
         
@@ -243,6 +254,270 @@ class Evaluator {
         }
         
         throw new Error(`${first} 不是函数或特殊形式`);
+    }
+
+    // ==================== 模式匹配宏展开核心 ====================
+    
+    expandMacro(macro, args) {
+        const { body, params } = macro;
+        
+        // 创建参数映射
+        const paramMap = {};
+        
+        // 绑定参数（支持模式匹配）
+        if (!this.bindParamsWithPattern(params, args, paramMap)) {
+            throw new Error(`宏参数模式匹配失败，期望: ${JSON.stringify(params)}，实际: ${JSON.stringify(args)}`);
+        }
+        
+        // 展开宏体
+        return this.expandMacroBody(body, paramMap);
+    }
+
+    bindParamsWithPattern(params, args, paramMap, startParamIndex = 0, startArgIndex = 0) {
+        let paramIndex = startParamIndex;
+        let argIndex = startArgIndex;
+        const paramLen = params.length;
+        const argLen = args.length;
+        
+        while (paramIndex < paramLen && argIndex < argLen) {
+            const param = params[paramIndex];
+            const arg = args[argIndex];
+            
+            // 处理 & 参数（可变参数）
+            if (param === '&') {
+                if (paramIndex + 1 >= paramLen) {
+                    throw new Error('& 后面需要参数名');
+                }
+                const restParam = params[paramIndex + 1];
+                // 收集剩余的所有参数
+                paramMap[restParam] = args.slice(argIndex);
+                return true; // 成功绑定
+            }
+            
+            // 处理模式匹配参数（如 [a to b]）
+            if (Array.isArray(param)) {
+                if (!this.matchPattern(param, arg, paramMap)) {
+                    return false; // 模式匹配失败
+                }
+                paramIndex++;
+                argIndex++;
+                continue;
+            }
+            
+            // 普通参数绑定
+            paramMap[param] = arg;
+            paramIndex++;
+            argIndex++;
+        }
+        
+        // 检查是否所有参数都已处理
+        if (paramIndex < paramLen) {
+            // 还有参数未处理
+            // 检查是否是 & 参数
+            if (params[paramIndex] === '&' && paramIndex + 1 < paramLen) {
+                // & 参数可以处理零个参数
+                const restParam = params[paramIndex + 1];
+                paramMap[restParam] = []; // 空列表
+                return true;
+            }
+            return false; // 还有必需参数未提供
+        }
+        
+        // 检查是否还有未使用的参数
+        if (argIndex < argLen) {
+            // 还有参数未使用
+            // 检查前面是否有 & 参数
+            for (let i = 0; i < paramIndex; i++) {
+                if (params[i] === '&') {
+                    // & 参数应该已经处理了所有剩余参数
+                    // 如果到这里还有剩余，说明有问题
+                    return false;
+                }
+            }
+            // 没有 & 参数，但有多余参数，不允许
+            return false;
+        }
+        
+        return true;
+    }
+
+    matchPattern(pattern, arg, paramMap) {
+        // 模式必须是列表
+        if (!Array.isArray(pattern)) {
+            throw new Error('模式必须是列表');
+        }
+        
+        // 参数必须是列表
+        if (!Array.isArray(arg)) {
+            console.log('模式匹配失败: 参数不是列表', pattern, arg);
+            return false;
+        }
+        
+        // 检查长度匹配
+        if (pattern.length !== arg.length) {
+            console.log('模式匹配失败: 长度不匹配', pattern.length, arg.length);
+            return false;
+        }
+        
+        // 逐个元素匹配
+        for (let i = 0; i < pattern.length; i++) {
+            const patternElem = pattern[i];
+            const argElem = arg[i];
+            
+            if (typeof patternElem === 'string') {
+                // 判断是变量还是关键字
+                if (this.isVariableName(patternElem)) {
+                    // 变量：绑定值
+                    paramMap[patternElem] = argElem;
+                } else {
+                    // 关键字：必须精确匹配
+                    if (patternElem !== argElem) {
+                        console.log('关键字不匹配:', patternElem, argElem);
+                        return false;
+                    }
+                }
+            } else if (Array.isArray(patternElem)) {
+                // 嵌套模式：递归匹配
+                if (!this.matchPattern(patternElem, argElem, paramMap)) {
+                    return false;
+                }
+            } else {
+                // 其他类型：必须精确匹配
+                if (patternElem !== argElem) {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+
+    isVariableName(name) {
+        if (typeof name !== 'string') return false;
+        // 变量名规则：
+        // 1. 不能是数字开头
+        // 2. 不能包含特殊字符
+        // 3. 不能是保留关键字
+        const reserved = ['&', '~', '~@', 'q', 'quote', 'def', 'set', 'fn', 'if', 'cond', 'do', 'let', 'while', 'macro'];
+        if (reserved.includes(name)) return false;
+        if (/^\d/.test(name)) return false;
+        if (/[\[\]\{\}\(\)\s,;]/.test(name)) return false;
+        return true;
+    }
+
+    expandMacroBody(expr, paramMap) {
+        // 处理字符串（符号）
+        if (typeof expr === 'string') {
+            // 处理 ~@symbol（拼接）
+            if (expr.startsWith('~@')) {
+                const paramName = expr.slice(2);
+                if (paramMap[paramName] !== undefined) {
+                    const value = paramMap[paramName];
+                    // 标记为拼接操作
+                    return { _type: 'splice', value };
+                }
+                return expr;
+            }
+            
+            // 处理 ~symbol（普通替换）
+            if (expr.startsWith('~')) {
+                const paramName = expr.slice(1);
+                if (paramMap[paramName] !== undefined) {
+                    return paramMap[paramName];
+                }
+                return expr;
+            }
+            
+            return expr;
+        }
+        
+        // 处理非列表值
+        if (!Array.isArray(expr)) {
+            return expr;
+        }
+        
+        // 处理 q/quote
+        if (expr[0] === 'q' || expr[0] === 'quote') {
+            const quotedExpr = expr[1];
+            const expanded = this.expandQuoted(quotedExpr, paramMap);
+            return expanded;
+        }
+        
+        // 递归处理列表
+        const result = [];
+        for (const item of expr) {
+            const expanded = this.expandMacroBody(item, paramMap);
+            
+            // 处理拼接
+            if (expanded && expanded._type === 'splice') {
+                const spliceValue = expanded.value;
+                if (Array.isArray(spliceValue)) {
+                    // 如果是数组，展开所有元素
+                    result.push(...spliceValue);
+                } else {
+                    // 否则直接添加
+                    result.push(spliceValue);
+                }
+            } else {
+                result.push(expanded);
+            }
+        }
+        
+        return result;
+    }
+
+    expandQuoted(expr, paramMap) {
+        // 处理字符串（符号）
+        if (typeof expr === 'string') {
+            // 处理 ~@symbol（拼接）
+            if (expr.startsWith('~@')) {
+                const paramName = expr.slice(2);
+                if (paramMap[paramName] !== undefined) {
+                    const value = paramMap[paramName];
+                    // 标记为拼接操作
+                    return { _type: 'splice', value };
+                }
+                return expr;
+            }
+            
+            // 处理 ~symbol（普通替换）
+            if (expr.startsWith('~')) {
+                const paramName = expr.slice(1);
+                if (paramMap[paramName] !== undefined) {
+                    return paramMap[paramName];
+                }
+                return expr;
+            }
+            
+            return expr;
+        }
+        
+        // 处理非列表值
+        if (!Array.isArray(expr)) {
+            return expr;
+        }
+        
+        // 递归处理列表
+        const result = [];
+        for (const item of expr) {
+            const expanded = this.expandQuoted(item, paramMap);
+            
+            // 处理拼接
+            if (expanded && expanded._type === 'splice') {
+                const spliceValue = expanded.value;
+                if (Array.isArray(spliceValue)) {
+                    // 如果是数组，展开所有元素
+                    result.push(...spliceValue);
+                } else {
+                    // 否则直接添加
+                    result.push(spliceValue);
+                }
+            } else {
+                result.push(expanded);
+            }
+        }
+        
+        return result;
     }
 
     // 获取环境中的所有绑定

@@ -1,4 +1,4 @@
-// repl.js - REPL 界面交互
+// repl.js - 修复版本
 class REPL {
     constructor(evaluator) {
         this.evaluator = evaluator;
@@ -107,6 +107,10 @@ class REPL {
             // 解析和求值
             const parser = new Parser();
             const ast = parser.read(code);
+            
+            // 调试信息
+            console.log('解析结果:', ast);
+            
             const result = this.evaluator.eval(ast);
             
             // 显示结果
@@ -116,6 +120,7 @@ class REPL {
             this.updateEnvironmentDisplay();
             
         } catch (error) {
+            console.error('执行错误:', error);
             this.addOutputLine(`错误: ${error.message}`, 'error');
         }
         
@@ -196,11 +201,10 @@ class REPL {
             { code: '[circle-area 10]', desc: '调用函数' },
             { code: '[cond [[> 5 3] "greater"] [else "less"]]', desc: '条件判断' },
             { code: '[let [[x 10] [y 20]] [+ x y]]', desc: '局部绑定' },
-            { code: '[list 1 2 3]', desc: '创建列表' },
-            { code: '[first [list 1 2 3]]', desc: '获取列表第一个元素' },
-            { code: '[macro when [cond & body] [q [if ~cond [do ~@body] nil]]]', desc: '定义 when 宏' },
-            { code: '[macro unless [cond & body] [q [if ~cond nil [do ~@body]]]]', desc: '定义 unless 宏' },
-            { code: '[def x 5] [unless [< x 0] [print "x is positive"]]', desc: '使用 unless 宏' }
+            { code: '[macro infix [a op b] [q [~op ~a ~b]]]', desc: '定义中缀宏' },
+            { code: '[infix 1 + 2]', desc: '使用中缀宏' },
+            { code: '[macro unless [cond & body] [q [cond [~cond 0] [else [do ~@body]]]]]', desc: '定义 unless 宏' },
+            { code: '[def x 5] [unless [= x 0] [print "x is not zero"]]', desc: '使用 unless 宏' }
         ];
         
         let examplesHTML = '<div class="examples-modal">';

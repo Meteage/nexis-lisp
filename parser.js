@@ -1,4 +1,4 @@
-// parser.js - 词法分析和语法解析
+// parser.js - 修复版本，支持多表达式
 class Parser {
     constructor() {
         this.tokenPatterns = [
@@ -40,59 +40,76 @@ class Parser {
         return tokens;
     }
 
-    parse(tokens) {
-        let index = 0;
+    parseExpression(tokens, startIndex = 0) {
+        let index = startIndex;
         
-        const parseExpression = () => {
-            if (index >= tokens.length) {
-                throw new Error('意外的结束');
-            }
-            
-            const token = tokens[index];
-            
-            if (token.type === 'LBRACKET') {
-                return parseList();
-            } else if (token.type === 'QUOTE') {
-                index++;
-                return ['quote', parseExpression()];
-            } else if (token.type === 'NUMBER') {
-                index++;
-                return parseFloat(token.value);
-            } else if (token.type === 'STRING') {
-                index++;
-                return token.value.slice(1, -1); // 移除引号
-            } else if (token.type === 'SYMBOL') {
-                index++;
-                return token.value;
-            } else {
-                throw new Error(`意外的 token: ${token.type}`);
-            }
-        };
+        if (index >= tokens.length) {
+            throw new Error('意外的结束');
+        }
         
-        const parseList = () => {
-            index++; // 跳过 '['
-            const list = [];
-            
-            while (index < tokens.length && tokens[index].type !== 'RBRACKET') {
-                list.push(parseExpression());
-            }
-            
-            if (index >= tokens.length) {
-                throw new Error('缺少匹配的 ]');
-            }
-            
-            index++; // 跳过 ']'
-            return list;
-        };
+        const token = tokens[index];
         
-        return parseExpression();
+        if (token.type === 'LBRACKET') {
+            return this.parseList(tokens, index);
+        } else if (token.type === 'QUOTE') {
+            index++;
+            const [expr, newIndex] = this.parseExpression(tokens, index);
+            return [['quote', expr], newIndex];
+        } else if (token.type === 'NUMBER') {
+            index++;
+            return [parseFloat(token.value), index];
+        } else if (token.type === 'STRING') {
+            index++;
+            return [token.value.slice(1, -1), index];
+        } else if (token.type === 'SYMBOL') {
+            index++;
+            return [token.value, index];
+        } else {
+            throw new Error(`意外的 token: ${token.type}`);
+        }
+    }
+    
+    parseList(tokens, startIndex) {
+        let index = startIndex;
+        index++; // 跳过 '['
+        const list = [];
+        
+        while (index < tokens.length && tokens[index].type !== 'RBRACKET') {
+            const [expr, newIndex] = this.parseExpression(tokens, index);
+            list.push(expr);
+            index = newIndex;
+        }
+        
+        if (index >= tokens.length) {
+            throw new Error('缺少匹配的 ]');
+        }
+        
+        index++; // 跳过 ']'
+        return [list, index];
     }
 
     read(input) {
         try {
             const tokens = this.tokenize(input);
-            const ast = this.parse(tokens);
-            return ast;
+            const expressions = [];
+            let index = 0;
+            
+            while (index < tokens.length) {
+                const [expr, newIndex] = this.parseExpression(tokens, index);
+                expressions.push(expr);
+                index = newIndex;
+            }
+            
+            // 如果只有一个表达式，直接返回它
+            // 如果有多个表达式，返回一个 do 表达式
+            if (expressions.length === 0) {
+                return null;
+            } else if (expressions.length === 1) {
+                return expressions[0];
+            } else {
+                return ['do', ...expressions];
+            }
+            
         } catch (error) {
             throw new Error(`解析错误: ${error.message}`);
         }
