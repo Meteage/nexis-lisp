@@ -39,284 +39,13 @@ class Environment {
     }
 }
 
-// ==================== 独立的宏展开器 ====================
-class MacroExpander {
-    constructor() {
-        this.debugLevel = 0;
-    }
 
-    log(level, ...args) {
-        if (this.debugLevel >= level) {
-            console.log(...args);
-        }
-    }
-
-    expandMacro(macro, args) {
-        this.log(2, `展开宏开始`);
-        this.log(2, `宏参数模式: ${JSON.stringify(macro.params)}`);
-        this.log(2, `实际参数: ${JSON.stringify(args)}`);
-        
-        const { body, params } = macro;
-        
-        // 收集宏体中所有解引用的符号
-        const referencedSymbols = this.collectReferencedSymbols(body);
-        this.log(2, `宏体引用的符号: ${Array.from(referencedSymbols).join(', ')}`);
-        
-        // 绑定参数
-        this.log(2, `绑定参数...`);
-        const paramMap = this.bindMacroParameters(params, args, referencedSymbols);
-        this.log(2, `参数绑定结果: ${JSON.stringify(paramMap)}`);
-        
-        // 展开宏体
-        this.log(2, `展开宏体...`);
-        const expanded = this.expandMacroBody(body, paramMap);
-        this.log(2, `宏体展开结果: ${JSON.stringify(expanded)}`);
-        
-        return expanded;
-    }
-    
-    collectReferencedSymbols(expr) {
-        const symbols = new Set();
-        
-        const collect = (expr) => {
-            if (typeof expr === 'string') {
-                // 检查是否以 ~ 或 ~@ 开头
-                if (expr.startsWith('~@')) {
-                    symbols.add(expr.slice(2));
-                } else if (expr.startsWith('~')) {
-                    symbols.add(expr.slice(1));
-                }
-                return;
-            }
-            
-            if (!Array.isArray(expr)) {
-                return;
-            }
-            
-            for (const item of expr) {
-                collect(item);
-            }
-        };
-        
-        collect(expr);
-        return symbols;
-    }
-    
-    bindMacroParameters(paramPattern, args, referencedSymbols) {
-        this.log(3, `绑定参数: pattern=${JSON.stringify(paramPattern)}, args=${JSON.stringify(args)}`);
-        const paramMap = {};
-        
-        let patternIndex = 0;
-        let argIndex = 0;
-        const patternLen = paramPattern.length;
-        const argLen = args.length;
-        
-        while (patternIndex < patternLen && argIndex < argLen) {
-            const patternElem = paramPattern[patternIndex];
-            this.log(3, `  处理模式元素[${patternIndex}]: ${JSON.stringify(patternElem)}`);
-            
-            // 处理 & 参数（可变参数）
-            if (patternElem === '&') {
-                if (patternIndex + 1 >= patternLen) {
-                    throw new Error('& 后面需要参数名');
-                }
-                
-                const restParam = paramPattern[patternIndex + 1];
-                this.log(3, `  找到可变参数: ${restParam}`);
-                patternIndex += 2;
-                
-                const restArgs = args.slice(argIndex);
-                this.log(3, `  剩余参数: ${JSON.stringify(restArgs)}`);
-                
-                if (referencedSymbols.has(restParam)) {
-                    paramMap[restParam] = restArgs;
-                    this.log(3, `  绑定可变参数 ${restParam} = ${JSON.stringify(restArgs)}`);
-                } else {
-                    this.log(3, `  可变参数 ${restParam} 未被引用，不绑定`);
-                }
-                
-                argIndex = argLen;
-                continue;
-            }
-            
-            const argElem = args[argIndex];
-            this.log(3, `  对应实参[${argIndex}]: ${JSON.stringify(argElem)}`);
-            
-            if (Array.isArray(patternElem)) {
-                if (!Array.isArray(argElem)) {
-                    throw new Error(`期望列表参数，实际: ${argElem}`);
-                }
-                
-                const nestedMap = this.bindMacroParameters(patternElem, argElem, referencedSymbols);
-                Object.assign(paramMap, nestedMap);
-                this.log(3, `  嵌套绑定结果: ${JSON.stringify(nestedMap)}`);
-            } else if (typeof patternElem === 'string') {
-                if (referencedSymbols.has(patternElem)) {
-                    paramMap[patternElem] = argElem;
-                    this.log(3, `  绑定参数 ${patternElem} = ${JSON.stringify(argElem)}`);
-                } else {
-                    this.log(3, `  检查关键字: ${patternElem} == ${argElem}?`);
-                    if (patternElem !== argElem) {
-                        throw new Error(`关键字不匹配: 期望 ${patternElem}, 实际 ${argElem}`);
-                    }
-                    this.log(3, `  关键字匹配: ${patternElem}`);
-                }
-            } else {
-                if (patternElem !== argElem) {
-                    throw new Error(`模式不匹配: 期望 ${patternElem}, 实际 ${argElem}`);
-                }
-            }
-            
-            patternIndex++;
-            argIndex++;
-        }
-        
-        this.log(3, `绑定完成，paramMap: ${JSON.stringify(paramMap)}`);
-        return paramMap;
-    }
-    
-    expandMacroBody(expr, paramMap, depth = 0) {
-        const indent = '  '.repeat(depth);
-        this.log(3, `${indent}展开宏体: ${JSON.stringify(expr)}`);
-        
-        if (typeof expr === 'string') {
-            if (expr.startsWith('~@')) {
-                const paramName = expr.slice(2);
-                this.log(3, `${indent}处理 ~@${paramName}`);
-                const value = paramMap[paramName];
-                if (value === undefined) {
-                    return expr;
-                }
-                
-                this.log(3, `${indent}~@${paramName} 的值: ${JSON.stringify(value)}`);
-                
-                if (Array.isArray(value)) {
-                    return { _type: 'splice', value: value };
-                }
-                return value;
-            }
-            
-            if (expr.startsWith('~')) {
-                const paramName = expr.slice(1);
-                this.log(3, `${indent}处理 ~${paramName}`);
-                const value = paramMap[paramName];
-                if (value === undefined) {
-                    return expr;
-                }
-                this.log(3, `${indent}~${paramName} -> ${JSON.stringify(value)}`);
-                return value;
-            }
-            
-            this.log(3, `${indent}普通字符串: ${expr}`);
-            return expr;
-        }
-        
-        if (!Array.isArray(expr)) {
-            this.log(3, `${indent}非列表值: ${expr}`);
-            return expr;
-        }
-        
-        // 处理 q/quote
-        if (expr[0] === 'q' || expr[0] === 'quote') {
-            const quotedExpr = expr[1];
-            this.log(3, `${indent}处理 q: ${JSON.stringify(quotedExpr)}`);
-            
-            const expandedQuoted = this.expandQuotedInQ(quotedExpr, paramMap, depth + 1);
-            this.log(3, `${indent}q 展开结果: ${JSON.stringify([expr[0], expandedQuoted])}`);
-            return [expr[0], expandedQuoted];
-        }
-        
-        this.log(3, `${indent}处理列表: ${expr.length} 个元素`);
-        const result = [];
-        
-        for (let i = 0; i < expr.length; i++) {
-            const item = expr[i];
-            this.log(3, `${indent}元素[${i}]: ${JSON.stringify(item)}`);
-            
-            const expanded = this.expandMacroBody(item, paramMap, depth + 1);
-            this.log(3, `${indent}元素[${i}] 展开后: ${JSON.stringify(expanded)}`);
-            
-            if (expanded && expanded._type === 'splice') {
-                const spliceValue = expanded.value;
-                this.log(3, `${indent}处理 splice: ${JSON.stringify(spliceValue)}`);
-                
-                if (Array.isArray(spliceValue)) {
-                    for (const elem of spliceValue) {
-                        result.push(elem);
-                    }
-                } else {
-                    result.push(spliceValue);
-                }
-            } else {
-                result.push(expanded);
-            }
-        }
-        
-        this.log(3, `${indent}列表展开结果: ${JSON.stringify(result)}`);
-        return result;
-    }
-
-    expandQuotedInQ(expr, paramMap, depth = 0) {
-        const indent = '  '.repeat(depth);
-        this.log(3, `${indent}expandQuotedInQ: ${JSON.stringify(expr)}`);
-        
-        if (typeof expr === 'string') {
-            if (expr.startsWith('~@')) {
-                const paramName = expr.slice(2);
-                const value = paramMap[paramName];
-                if (value === undefined) {
-                    return expr;
-                }
-                this.log(3, `${indent}~@${paramName} -> ${JSON.stringify(value)}`);
-                return { _type: 'q-splice', value };
-            }
-            
-            if (expr.startsWith('~')) {
-                const paramName = expr.slice(1);
-                const value = paramMap[paramName];
-                if (value === undefined) {
-                    return expr;
-                }
-                this.log(3, `${indent}~${paramName} -> ${JSON.stringify(value)}`);
-                return value;
-            }
-            
-            return expr;
-        }
-        
-        if (!Array.isArray(expr)) {
-            return expr;
-        }
-        
-        const result = [];
-        for (let i = 0; i < expr.length; i++) {
-            const item = expr[i];
-            const expanded = this.expandQuotedInQ(item, paramMap, depth + 1);
-            
-            if (expanded && expanded._type === 'q-splice') {
-                const spliceValue = expanded.value;
-                if (Array.isArray(spliceValue)) {
-                    for (const elem of spliceValue) {
-                        result.push(elem);
-                    }
-                } else {
-                    result.push(spliceValue);
-                }
-            } else {
-                result.push(expanded);
-            }
-        }
-        
-        return result;
-    }
-}
-
-// ==================== 求值器 ====================
+// evaluator.js - 配合宏展开器的求值器
 class Evaluator {
-    constructor() {
+    constructor(macroExpander) {
         this.globalEnv = this.createGlobalEnvironment();
-        this.macroExpander = new MacroExpander();
-        this.debugLevel = 0;
+        this.macroExpander = macroExpander || new MacroExpander();
+        this.debugLevel = 1;
     }
 
     log(level, ...args) {
@@ -375,7 +104,7 @@ class Evaluator {
         
         // 类型判断
         env.define('number?', (x) => typeof x === 'number');
-        env.define('string?', (x) => typeof x === 'string' );
+        env.define('string?', (x) => typeof x === 'string');
         env.define('list?', (x) => Array.isArray(x));
         env.define('symbol?', (x) => false);
         env.define('boolean?', (x) => typeof x === 'boolean');
@@ -392,11 +121,19 @@ class Evaluator {
         
         // 输入输出
         env.define('print', (...args) => {
-            const result = args.map(arg => 
-                typeof arg === 'string' ? arg :
-                Array.isArray(arg) ? `[${arg.join(' ')}]` :
-                String(arg)
-            ).join(' ');
+            const result = args.map(arg => {
+                if (typeof arg === 'string') {
+                    // 如果是带引号的字符串，去掉引号显示
+                    if (arg.startsWith('"') && arg.endsWith('"')) {
+                        return arg.slice(1, -1);
+                    }
+                    return arg;
+                } else if (Array.isArray(arg)) {
+                    return `[${arg.join(' ')}]`;
+                } else {
+                    return String(arg);
+                }
+            }).join(' ');
             console.log(result);
             return result;
         });
@@ -411,49 +148,50 @@ class Evaluator {
         this.log(3, `${indent}eval: ${JSON.stringify(expr)}`);
         
         // 处理原子值
-        if (typeof expr === 'number') {
-            this.log(3, `${indent}-> number: ${expr}`);
+        if (typeof expr === 'number' || typeof expr === 'boolean' || expr === null) {
+            this.log(3, `${indent}-> 原子值: ${expr}`);
             return expr;
-        }
-        if (typeof expr === 'boolean') {
-            this.log(3, `${indent}-> boolean: ${expr}`);
-            return expr;
-        }
-        if (expr === null) {
-            this.log(3, `${indent}-> null`);
-            return null;
         }
         
-        if (typeof expr === 'string' ) {
-            if(expr.startsWith('"') && expr.endsWith('"')){
-                const str = expr.slice(1, -1);
-                this.log(3, `${indent}-> string: "${str}"`);
-                return str;
+        if (typeof expr === 'string') {
+            // 检查是否是字符串字面量
+            if (expr.startsWith('"') && expr.endsWith('"')) {
+                this.log(3, `${indent}-> 字符串: ${expr}`);
+                //去掉引号
+                return expr.slice(1, -1);
             }
-            else {
+            
+            // 符号查找
+            try {
                 const value = env.get(expr);
-                this.log(3, `${indent}-> symbol ${expr}: ${typeof value === 'function' ? '[function]' : JSON.stringify(value)}`);
+                this.log(3, `${indent}-> 符号 ${expr}: ${JSON.stringify(value)}`);
                 return value;
+            } catch (error) {
+                throw new Error(`${expr} 未定义`);
             }
         }
        
         // 处理列表
         if (!Array.isArray(expr) || expr.length === 0) {
-            this.log(3, `${indent}-> non-list or empty: ${expr}`);
+            this.log(3, `${indent}-> 空列表或非列表: ${JSON.stringify(expr)}`);
             return expr;
         }
         
         const [first, ...rest] = expr;
         this.log(2, `${indent}列表: ${JSON.stringify(first)} ${rest.length > 0 ? '...' : ''}`);
         
-        // 特殊处理symbol?
-        if (first === 'symbol?') {
-            const [arg] = rest;
-            const result = typeof arg === 'string' && !arg.startsWith('"') && !arg.endsWith('"');
-            this.log(2, `${indent}symbol? ${arg} -> ${result}`);
-            return result;
-        }
+        // 处理特殊形式
 
+        if(first === 'symbol?') {
+            
+            return env.has(rest[0]);
+        }
+        if (first === 'quote'|| first === 'q') {
+            const quoted = rest[0];
+            this.log(2, `${indent}quote -> ${JSON.stringify(quoted)}`);
+            return quoted;
+        }
+        
         if (first === 'def') {
             const [symbol, valueExpr] = rest;
             this.log(2, `${indent}def ${symbol}`);
@@ -527,12 +265,6 @@ class Evaluator {
             return result;
         }
         
-        if (first === 'q' || first === 'quote') {
-            const quoted = rest[0];
-            this.log(2, `${indent}quote -> ${JSON.stringify(quoted)}`);
-            return quoted;
-        }
-        
         if (first === 'while') {
             const [test, ...body] = rest;
             this.log(2, `${indent}while`);
@@ -550,18 +282,23 @@ class Evaluator {
             return result;
         }
         
-        if (first === 'macro') {
-            const [name, params, body] = rest;
-            this.log(1, `${indent}定义宏: ${name} ${JSON.stringify(params)}`);
-            const macro = {
-                type: 'macro',
-                params,
-                body,
-                env
-            };
-            env.define(name, macro);
-            return macro;
-        }
+        // 在求值器中更新 macro 特殊形式处理
+if (first === 'macro') {
+    const [name, params, body] = rest;
+    this.log(1, `${indent}定义宏: ${name} ${JSON.stringify(params)}`);
+    
+    // 将 ampersand 语法转换为宏展开器期望的格式
+    const processedParams = this.processMacroParams(params);
+    
+    const macro = {
+        type: 'macro',
+        params: processedParams,
+        body
+    };
+    env.define(name, macro);
+    return macro;
+}
+
         
         // 普通函数调用
         this.log(3, `${indent}调用: ${first}`);
@@ -571,14 +308,18 @@ class Evaluator {
         if (operator && operator.type === 'macro') {
             this.log(1, `${indent}展开宏: ${first}`);
             this.log(2, `${indent}宏参数: ${JSON.stringify(rest)}`);
-            const macroArgs = rest;
             
             // 使用宏展开器展开宏
-            const expanded = this.macroExpander.expandMacro(operator, macroArgs);
+            const expanded = this.macroExpander.expandMacro(operator, rest);
             this.log(1, `${indent}宏 ${first} 展开结果: ${JSON.stringify(expanded)}`);
-            
-            // 关键修复：应该返回整个展开结果，不是 expanded[1]
-            return this.eval(expanded, env, depth + 1);
+            //去掉quote 
+            let finalExpanded = expanded;
+            if (Array.isArray(expanded) &&( expanded[0] === 'quote'|| expanded[0] === 'q')) {
+                finalExpanded = expanded[1];
+                this.log(2, `${indent}去掉quote后的宏展开结果: ${JSON.stringify(finalExpanded)}`);
+            }
+            // 求值展开后的表达式
+            return this.eval(finalExpanded, env, depth + 1);
         }
         
         // 检查是否是函数
@@ -594,6 +335,24 @@ class Evaluator {
         
         throw new Error(`${first} 不是函数或特殊形式`);
     }
+
+    // 添加辅助方法处理宏参数
+processMacroParams(params) {
+    const result = [];
+    
+    for (let i = 0; i < params.length; i++) {
+        const item = params[i];
+        
+        if (Array.isArray(item) && item[0] === 'ampersand') {
+            // 将 ['ampersand', 'param'] 转换为 ['ampersand', 'param']
+            result.push(item);
+        } else {
+            result.push(item);
+        }
+    }
+    
+    return result;
+}
 
     // 获取环境中的所有绑定
     getEnvironmentBindings() {
@@ -617,7 +376,69 @@ class Evaluator {
     }
 }
 
+// 完整测试
+if (typeof require !== 'undefined' && require.main === module) {
+    const { MacroExpander } = require('./macro-expander.js');
+    const { Parser } = require('./parser.js');
+    
+    console.log('=== 完整测试：解析、展开、求值 ===\n');
+    
+    // 创建组件
+    const expander = new MacroExpander();
+    expander.debugLevel = 1;
+    
+    const evaluator = new Evaluator(expander);
+    evaluator.debugLevel = 1;
+    
+    const parser = new Parser();
+    
+    // 测试代码
+    const code = `
+        [macro for [[x in seq] & body] 
+            [quote [do
+                [def temp-seq ~seq]
+                [while [not [null? temp-seq]]
+                    [def ~x [first temp-seq]]
+                    ~@body
+                    [set temp-seq [rest temp-seq]]
+                ]
+                null
+            ]]
+        ]
+        
+        [for [n in [list 1 2 3]] [print n]]
+    `;
+    
+    try {
+        // 解析
+        console.log('解析代码...');
+        const expressions = parser.readAll(code);
+        
+        console.log('\n解析结果:');
+        expressions.forEach((expr, i) => {
+            console.log(`表达式 ${i}: ${JSON.stringify(expr)}`);
+        });
+        
+        // 求值
+        console.log('\n求值结果:');
+        expressions.forEach((expr, i) => {
+            console.log(`\n执行表达式 ${i}:`);
+            try {
+                const result = evaluator.eval(expr);
+                console.log(`结果: ${JSON.stringify(result)}`);
+            } catch (error) {
+                console.error(`错误: ${error.message}`);
+                if (error.stack) console.error(error.stack);
+            }
+        });
+        
+    } catch (error) {
+        console.error('错误:', error.message);
+        if (error.stack) console.error(error.stack);
+    }
+}
+
 // 导出
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Environment, Evaluator, MacroExpander };
+    module.exports = { Evaluator };
 }

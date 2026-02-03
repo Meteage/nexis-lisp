@@ -22,11 +22,22 @@ class Parser {
         switch (token.type) {
             case 'LBRACKET':
                 return this.parseList(tokens, index);
-                
+            case 'AMPERSAND':
+                index++;
+                const [exprAmp, newIndexAmp] = this.parseExpression(tokens, index);
+                return [['ampersand' , exprAmp], newIndexAmp];
+            case 'UNQUOTE_AT':
+                index++;
+                const [exprAt, newIndexAt] = this.parseExpression(tokens, index);
+                return [['unquote-at' , exprAt], newIndexAt];    
+            case 'UNQUOTE':
+                index++;
+                const [exprU, newIndexU] = this.parseExpression(tokens, index);
+                return [['unquote' , exprU], newIndexU];
             case 'QUOTE':
                 index++;
-                const [expr, newIndex] = this.parseExpression(tokens, index);
-                return [['quote' , expr], newIndex];
+                const [exprQ, newIndexQ] = this.parseExpression(tokens, index);
+                return [['quote' , exprQ], newIndexQ];
                 
             case 'NUMBER':
                 index++;

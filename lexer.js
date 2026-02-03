@@ -7,10 +7,13 @@ class Lexer {
             { type: 'COMMENT', pattern: /^;[^\n]*/ },
             { type: 'NUMBER', pattern: /^-?\d+(\.\d+)?/ },
             { type: 'STRING', pattern: /^"([^"\\]|\\.)*"/ },
-            { type: 'SYMBOL', pattern: /^[^\s\[\]\{\}\(\)"';]+/ },
+			{ type: 'UNQUOTE_AT', pattern: /^~@/ },
+			{ type: 'UNQUOTE', pattern: /^~/ },
             { type: 'QUOTE', pattern: /^'/ },
+			{ type: 'AMPERSAND', pattern: /^&/ },
             { type: 'LBRACKET', pattern: /^\[/ },
-            { type: 'RBRACKET', pattern: /^\]/ }
+            { type: 'RBRACKET', pattern: /^\]/ },
+            { type: 'SYMBOL', pattern: /^[^\s\[\]\{\}\(\)"';]+/ },
         ];
     }
 
@@ -93,6 +96,12 @@ class Lexer {
         });
     }
 }
+
+const lexer = new Lexer();
+lexer.printTokens(lexer.tokenize(`
+	; 这是一个注释
+	[macro for [[var in seq] & body] [q [do [def temp-seq ~seq] [while [not [null? temp-seq]] [def ~var [first temp-seq]] ~@body [set temp-seq [rest temp-seq]] ] null ] ] ]
+`));
 
 // 导出词法分析器
 if (typeof module !== 'undefined' && module.exports) {
