@@ -93,9 +93,9 @@ class Evaluator {
         
         // 类型判断
         env.define('number?', (x) => typeof x === 'number');
-        env.define('string?', (x) => typeof x === 'string');
+        env.define('string?', (x) => typeof x === 'string' );
         env.define('list?', (x) => Array.isArray(x));
-        env.define('symbol?', (x) => typeof x === 'string' && /^[^\d]/.test(x));
+        env.define('symbol?', (x) => env.get(x)? true : false);
         env.define('null?', (x) => x === null || (Array.isArray(x) && x.length === 0));
         
         // 列表操作
@@ -128,10 +128,23 @@ class Evaluator {
         if (typeof expr === 'number') {
             return expr;
         }
-        
-        if (typeof expr === 'string') {
-            return env.get(expr);
+        if (typeof expr === 'boolean') {
+            return expr;
         }
+        if (expr === null) {
+            return null;
+        }
+        
+        if (typeof expr === 'string' ) {
+            //如果 包含""是字符串， 否则是符号
+            if(expr.startsWith('"') && expr.endsWith('"')){
+                return expr.slice(1, -1);
+            }
+            else {
+                return env.get(expr);
+            }
+        }
+       
         
         // 处理列表
         if (!Array.isArray(expr) || expr.length === 0) {

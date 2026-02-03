@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexis Lisp 完整特性测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e6e6e6;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid #2d4059;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #3498db;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header .subtitle {
+            color: #8a8a8a;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+        
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .feature-tag {
+            padding: 5px 10px;
+            background: rgba(52, 152, 219, 0.2);
+            border-radius: 15px;
+            font-size: 0.9em;
+            color: #7ed6df;
+        }
+        
+        .test-controls {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .test-btn {
+            padding: 12px 25px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 150px;
+            justify-content: center;
+        }
+        
+        .run-all-btn {
+            background: #2ecc71;
+            color: white;
+        }
+        
+        .run-all-btn:hover {
+            background: #27ae60;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .run-category-btn {
+            background: #3498db;
+            color: white;
+        }
+        
+        .run-category-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .clear-btn {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .clear-btn:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .stats-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            border: 1px solid #2d4059;
+        }
+        
+        .stats-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        .stats-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stats-label {
+            font-size: 0.9em;
+            color: #8a8a8a;
+        }
+        
+        .progress-container {
+            flex: 3;
+            min-width: 300px;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background: #2d4059;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2ecc71, #3498db);
+            border-radius: 5px;
+            transition: width 0.5s ease;
+        }
+        
+        .test-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .category-card {
+            background: rgba(22, 33, 62, 0.8);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid #2d4059;
+        }
+        
+        .category-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .category-header {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid #2d4059;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .category-title {
+            font-size: 1.3em;
+            color: #e6e6e6;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .category-icon {
+            color: #3498db;
+            font-size: 1.2em;
+        }
+        
+        .category-count {
+            background: #3498db;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.9em;
+        }
+        
+        .test-list {
+            padding: 20px;
+        }
+        
+        .test-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            border-left: 4px solid #2d4059;
+            transition: all 0.2s;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .test-item:hover {
+            background: rgba(52, 152, 219, 0.1);
+            border-left-color: #3498db;
+        }
+        
+        .test-name {
+            font-size: 0.95em;
+            color: #cccccc;
+        }
+        
+        .test-status {
+            font-size: 1.2em;
+        }
+        
+        .status-pending {
+            color: #f39c12;
+        }
+        
+        .status-running {
+            color: #3498db;
+        }
+        
+        .status-pass {
+            color: #2ecc71;
+        }
+        
+        .status-fail {
+            color: #e74c3c;
+        }
+        
+        .console-panel {
+            background: #0f1419;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            border: 1px solid #2d4059;
+        }
+        
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #2d4059;
+        }
+        
+        .console-title {
+            font-size: 1.2em;
+            color: #3498db;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .console-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .console-btn {
+            padding: 5px 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 4px;
+            color: #cccccc;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .console-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .console-output {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .console-line {
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .console-line.info {
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+            border-left: 3px solid #3498db;
+        }
+        
+        .console-line.success {
+            background: rgba(46, 204, 113, 0.1);
+            color: #2ecc71;
+            border-left: 3px solid #2ecc71;
+        }
+        
+        .console-line.error {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+            border-left: 3px solid #e74c3c;
+        }
+        
+        .console-line.test {
+            background: rgba(155, 89, 182, 0.1);
+            color: #9b59b6;
+            border-left: 3px solid #9b59b6;
+        }
+        
+        .console-line.warn {
+            background: rgba(241, 196, 15, 0.1);
+            color: #f1c40f;
+            border-left: 3px solid #f1c40f;
+        }
+        
+        .summary-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            border: 1px solid #2d4059;
+            display: none;
+        }
+        
+        .summary-title {
+            font-size: 1.8em;
+            color: #3498db;
+            margin-bottom: 20px;
+        }
+        
+        .summary-result {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 10px;
+        }
+        
+        .summary-success {
+            background: rgba(46, 204, 113, 0.1);
+            color: #2ecc71;
+            border: 2px solid #2ecc71;
+        }
+        
+        .summary-failure {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+            border: 2px solid #e74c3c;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .feature-item {
+            padding: 12px;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+        
+        .feature-item:hover {
+            background: rgba(52, 152, 219, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .feature-icon {
+            color: #2ecc71;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse {
+            animation: pulse 1s infinite;
+        }
+        
+        @media (max-width: 768px) {
+            .test-categories {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-panel {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .stats-item {
+                min-width: 100%;
+                margin-bottom: 15px;
+            }
+            
+            .progress-container {
+                min-width: 100%;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-code"></i> Nexis Lisp v2.0 特性测试</h1>
+            <p class="subtitle">全面验证 Nexis Lisp 的所有特性实现情况</p>
+            <div class="features">
+                <span class="feature-tag">方括号语法</span>
+                <span class="feature-tag">模式匹配宏</span>
+                <span class="feature-tag">动态作用域</span>
+                <span class="feature-tag">宏系统</span>
+                <span class="feature-tag">函数式编程</span>
+                <span class="feature-tag">列表处理</span>
+                <span class="feature-tag">条件控制</span>
+                <span class="feature-tag">循环迭代</span>
+            </div>
+        </header>
+        
+        <div class="test-controls">
+            <button id="run-all-btn" class="test-btn run-all-btn">
+                <i class="fas fa-play-circle"></i> 运行全部测试
+            </button>
+            <button id="run-basic-btn" class="test-btn run-category-btn">
+                <i class="fas fa-cube"></i> 基础测试
+            </button>
+            <button id="run-function-btn" class="test-btn run-category-btn">
+                <i class="fas fa-function"></i> 函数测试
+            </button>
+            <button id="run-control-btn" class="test-btn run-category-btn">
+                <i class="fas fa-code-branch"></i> 控制流测试
+            </button>
+            <button id="run-list-btn" class="test-btn run-category-btn">
+                <i class="fas fa-list"></i> 列表测试
+            </button>
+            <button id="run-macro-btn" class="test-btn run-category-btn">
+                <i class="fas fa-magic"></i> 宏测试
+            </button>
+            <button id="run-pattern-btn" class="test-btn run-category-btn">
+                <i class="fas fa-puzzle-piece"></i> 模式匹配测试
+            </button>
+            <button id="clear-btn" class="test-btn clear-btn">
+                <i class="fas fa-trash"></i> 清除结果
+            </button>
+        </div>
+        
+        <div class="stats-panel">
+            <div class="stats-item">
+                <div class="stats-value" id="total-tests">0</div>
+                <div class="stats-label">总计测试</div>
+            </div>
+            <div class="stats-item">
+                <div class="stats-value" id="passed-tests">0</div>
+                <div class="stats-label">通过</div>
+            </div>
+            <div class="stats-item">
+                <div class="stats-value" id="failed-tests">0</div>
+                <div class="stats-label">失败</div>
+            </div>
+            <div class="stats-item">
+                <div class="stats-value" id="success-rate">0%</div>
+                <div class="stats-label">通过率</div>
+            </div>
+            <div class="progress-container">
+                <div>测试进度</div>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-categories" id="test-categories">
+            <!-- 测试分类会动态生成 -->
+        </div>
+        
+        <div class="console-panel">
+            <div class="console-header">
+                <div class="console-title">
+                    <i class="fas fa-terminal"></i> 控制台输出
+                </div>
+                <div class="console-controls">
+                    <button id="clear-console-btn" class="console-btn">
+                        <i class="fas fa-eraser"></i> 清空
+                    </button>
+                    <button id="copy-console-btn" class="console-btn">
+                        <i class="fas fa-copy"></i> 复制
+                    </button>
+                </div>
+            </div>
+            <div id="console-output" class="console-output">
+                <div class="console-line info">等待测试开始...</div>
+            </div>
+        </div>
+        
+        <div id="summary-panel" class="summary-panel">
+            <h2 class="summary-title"><i class="fas fa-trophy"></i> 测试完成</h2>
+            <div id="summary-result" class="summary-result"></div>
+            <div id="feature-grid" class="feature-grid"></div>
+        </div>
+    </div>
+    
+    <!-- 加载核心文件 -->
+    <script src="lexer.js"></script>
+    <script src="parser.js"></script>
+    <script src="evaluator.js"></script>
+    
+    <!-- 测试实现 -->
+    <script>
+        // Nexis Lisp 测试套件
+        class NexisTestSuite {
+            constructor() {
+                this.evaluator = new Evaluator();
+                this.parser = new Parser();
+                this.results = {
+                    total: 0,
+                    passed: 0,
+                    failed: 0,
+                    tests: {}
+                };
+                this.testQueue = [];
+                this.currentTest = null;
+                this.isRunning = false;
+                
+                this.initEnvironment();
+                this.createTestCategories();
+                this.bindEvents();
+            }
+            
+            initEnvironment() {
+                // 预定义一些宏用于测试
+                const setupCode = `
+                    [macro when [condition & body] [q [if ~condition [do ~@body] nil]]]
+                    [macro unless [condition & body] [q [if ~condition nil [do ~@body]]]]
+                    [macro infix [a op b] [q [~op ~a ~b]]]
+                `;
+                
+                try {
+                    const ast = this.parser.read(setupCode);
+                    this.evaluator.eval(ast);
+                    this.log('info', '测试环境初始化完成');
+                } catch (error) {
+                    this.log('error', `环境初始化失败: ${error.message}`);
+                }
+            }
+            
+            createTestCategories() {
+                const categories = [
+                    {
+                        id: 'basic',
+                        title: '基础特性',
+                        icon: 'fas fa-cube',
+                        tests: this.createBasicTests()
+                    },
+                    {
+                        id: 'functions',
+                        title: '函数与运算',
+                        icon: 'fas fa-function',
+                        tests: this.createFunctionTests()
+                    },
+                    {
+                        id: 'control',
+                        title: '控制流',
+                        icon: 'fas fa-code-branch',
+                        tests: this.createControlFlowTests()
+                    },
+                    {
+                        id: 'lists',
+                        title: '列表操作',
+                        icon: 'fas fa-list',
+                        tests: this.createListTests()
+                    },
+                    {
+                        id: 'macros',
+                        title: '宏系统',
+                        icon: 'fas fa-magic',
+                        tests: this.createMacroTests()
+                    },
+                    {
+                        id: 'pattern',
+                        title: '模式匹配',
+                        icon: 'fas fa-puzzle-piece',
+                        tests: this.createPatternMatchTests()
+                    },
+                    {
+                        id: 'advanced',
+                        title: '高级特性',
+                        icon: 'fas fa-rocket',
+                        tests: this.createAdvancedTests()
+                    }
+                ];
+                
+                const container = document.getElementById('test-categories');
+                container.innerHTML = '';
+                
+                categories.forEach(category => {
+                    const card = document.createElement('div');
+                    card.className = 'category-card';
+                    card.id = `category-${category.id}`;
+                    
+                    let testsHtml = '';
+                    category.tests.forEach((test, index) => {
+                        const testId = `${category.id}-${index}`;
+                        testsHtml += `
+                            <div class="test-item" id="test-${testId}" data-test-id="${testId}">
+                                <div class="test-name">${test.name}</div>
+                                <div class="test-status status-pending">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    card.innerHTML = `
+                        <div class="category-header">
+                            <div class="category-title">
+                                <i class="category-icon ${category.icon}"></i>
+                                <span>${category.title}</span>
+                            </div>
+                            <div class="category-count">${category.tests.length} 个测试</div>
+                        </div>
+                        <div class="test-list">
+                            ${testsHtml}
+                        </div>
+                    `;
+                    
+                    container.appendChild(card);
+                    
+                    // 存储测试数据
+                    category.tests.forEach((test, index) => {
+                        const testId = `${category.id}-${index}`;
+                        this.results.tests[testId] = {
+                            ...test,
+                            category: category.id,
+                            status: 'pending',
+                            result: null
+                        };
+                    });
+                });
+            }
+            
+            createBasicTests() {
+                return [
+                    {
+                        name: '数字求值',
+                        code: '123',
+                        expected: 123
+                    },
+                    {
+                        name: '字符串求值',
+                        code: '"Hello Nexis"',
+                        expected: 'Hello Nexis'
+                    },
+                    {
+                        name: '变量定义',
+                        code: '[def pi 3.14159]',
+                        expected: 3.14159
+                    },
+                    {
+                        name: '变量引用',
+                        code: '[def answer 42] answer',
+                        expected: 42
+                    },
+                    {
+                        name: '变量修改',
+                        code: '[def x 5] [set x 15] x',
+                        expected: 15
+                    },
+                    {
+                        name: '布尔值 true',
+                        code: 'true',
+                        expected: true
+                    },
+                    {
+                        name: '布尔值 false',
+                        code: 'false',
+                        expected: false
+                    },
+                    {
+                        name: '空值 null',
+                        code: 'null',
+                        expected: null
+                    }
+                ];
+            }
+            
+            createFunctionTests() {
+                return [
+                    {
+                        name: '加法运算',
+                        code: '[+ 1 2 3 4 5]',
+                        expected: 15
+                    },
+                    {
+                        name: '减法运算',
+                        code: '[- 100 50 20 10]',
+                        expected: 20
+                    },
+                    {
+                        name: '乘法运算',
+                        code: '[* 2 3 4 5]',
+                        expected: 120
+                    },
+                    {
+                        name: '除法运算',
+                        code: '[/ 100 4 5]',
+                        expected: 5
+                    },
+                    {
+                        name: '取模运算',
+                        code: '[mod 17 5]',
+                        expected: 2
+                    },
+                    {
+                        name: '匿名函数定义',
+                        code: '[fn [x] [* x x]]',
+                        expected: 'function',
+                        compare: (result) => typeof result === 'function'
+                    },
+                    {
+                        name: '匿名函数调用',
+                        code: '[[fn [x] [+ x 10]] 5]',
+                        expected: 15
+                    },
+                    {
+                        name: '命名函数',
+                        code: '[def square [fn [x] [* x x]]] [square 8]',
+                        expected: 64
+                    },
+                    {
+                        name: '多参数函数',
+                        code: '[def add3 [fn [a b c] [+ a b c]]] [add3 10 20 30]',
+                        expected: 60
+                    },
+                    {
+                        name: '嵌套函数调用',
+                        code: '[+ [* 2 3] [- 10 4]]',
+                        expected: 12
+                    },
+                    {
+                        name: '比较运算 =',
+                        code: '[= 5 5 5]',
+                        expected: true
+                    },
+                    {
+                        name: '比较运算 !=',
+                        code: '[!= 5 6]',
+                        expected: true
+                    },
+                    {
+                        name: '比较运算 >',
+                        code: '[> 10 5 3]',
+                        expected: true
+                    },
+                    {
+                        name: '比较运算 <',
+                        code: '[< 1 3 5]',
+                        expected: true
+                    }
+                ];
+            }
+            
+            createControlFlowTests() {
+                return [
+                    {
+                        name: 'if 真分支',
+                        code: '[if [> 10 5] "greater" "less"]',
+                        expected: 'greater'
+                    },
+                    {
+                        name: 'if 假分支',
+                        code: '[if [< 10 5] "greater" "less"]',
+                        expected: 'less'
+                    },
+                    {
+                        name: 'cond 多分支',
+                        code: '[cond [[> 10 20] "big"] [[< 10 5] "small"] [else "medium"]]',
+                        expected: 'medium'
+                    },
+                    {
+                        name: 'do 顺序执行',
+                        code: '[do [def a 1] [def b 2] [def c 3] [+ a b c]]',
+                        expected: 6
+                    },
+                    {
+                        name: 'let 局部绑定',
+                        code: '[let [[x 10] [y [* x 2]]] [+ x y]]',
+                        expected: 30
+                    },
+                    {
+                        name: 'while 循环',
+                        code: '[def i 0] [def sum 0] [while [< i 5] [set sum [+ sum i]] [set i [+ i 1]]] sum',
+                        expected: 10
+                    },
+                    {
+                        name: '逻辑运算 and',
+                        code: '[and true true false]',
+                        expected: false
+                    },
+                    {
+                        name: '逻辑运算 or',
+                        code: '[or false false true]',
+                        expected: true
+                    },
+                    {
+                        name: '逻辑运算 not',
+                        code: '[not false]',
+                        expected: true
+                    }
+                ];
+            }
+            
+            createListTests() {
+                return [
+                    {
+                        name: 'list 创建',
+                        code: '[list 1 2 3 4 5]',
+                        expected: [1, 2, 3, 4, 5]
+                    },
+                    {
+                        name: 'cons 添加元素',
+                        code: '[cons 0 [list 1 2 3]]',
+                        expected: [0, 1, 2, 3]
+                    },
+                    {
+                        name: 'first 获取首元素',
+                        code: '[first [list "a" "b" "c"]]',
+                        expected: 'a'
+                    },
+                    {
+                        name: 'rest 获取剩余',
+                        code: '[rest [list 1 2 3 4]]',
+                        expected: [2, 3, 4]
+                    },
+                    {
+                        name: 'len 获取长度',
+                        code: '[len [list 1 2 3 4 5]]',
+                        expected: 5
+                    },
+                    {
+                        name: 'append 拼接列表',
+                        code: '[append [list 1 2] [list 3 4] [list 5 6]]',
+                        expected: [1, 2, 3, 4, 5, 6]
+                    },
+                    {
+                        name: 'reverse 反转列表',
+                        code: '[reverse [list 1 2 3 4 5]]',
+                        expected: [5, 4, 3, 2, 1]
+                    },
+                    {
+                        name: 'null? 空列表',
+                        code: '[null? []]',
+                        expected: true
+                    },
+                    {
+                        name: 'null? 非空列表',
+                        code: '[null? [list 1]]',
+                        expected: false
+                    },
+                    {
+                        name: 'list? 列表判断',
+                        code: '[list? [list 1 2 3]]',
+                        expected: true
+                    },
+                    {
+                        name: 'list? 非列表判断',
+                        code: '[list? 123]',
+                        expected: false
+                    }
+                ];
+            }
+            
+            createMacroTests() {
+                return [
+                    {
+                        name: '简单宏定义',
+                        code: '[macro hello [] [q "Hello World!"]]',
+                        expected: 'macro',
+                        compare: (result) => result && result.type === 'macro'
+                    },
+                    {
+                        name: '宏调用',
+                        code: '[macro greet [] [q "Welcome to Nexis!"]] [greet]',
+                        expected: 'Welcome to Nexis!'
+                    },
+                    {
+                        name: '带参数宏',
+                        code: '[macro say [msg] [q [cat "You said: " ~msg]]] [say "Hello"]',
+                        expected: 'You said: Hello'
+                    },
+                    {
+                        name: 'when 宏',
+                        code: '[when [> 5 3] [print "Condition true"]]',
+                        expected: 'Condition true',
+                        compare: (result) => result === 'Condition true'
+                    },
+                    {
+                        name: 'unless 宏',
+                        code: '[unless [< 5 3] [print "Condition false"]]',
+                        expected: 'Condition false',
+                        compare: (result) => result === 'Condition false'
+                    },
+                    {
+                        name: 'infix 宏',
+                        code: '[infix 10 * 20]',
+                        expected: 200
+                    },
+                    {
+                        name: '宏参数展开 ~',
+                        code: '[macro triple [x] [q [* 3 ~x]]] [triple 7]',
+                        expected: 21
+                    },
+                    {
+                        name: '宏拼接展开 ~@',
+                        code: '[macro make-list [& args] [q [list ~@args]]] [make-list 1 2 3 4]',
+                        expected: [1, 2, 3, 4]
+                    },
+                    {
+                        name: '嵌套宏调用',
+                        code: '[macro add-then-double [x y] [q [* 2 [+ ~x ~y]]]] [add-then-double 5 10]',
+                        expected: 30
+                    }
+                ];
+            }
+            
+            createPatternMatchTests() {
+                return [
+                    {
+                        name: 'range 宏定义',
+                        code: '[macro range [[i from a to b] & body] [q [do [def ~i ~a] [while [< ~i ~b] [do ~@body [set ~i [+ ~i 1]]]]]]]',
+                        expected: 'macro',
+                        compare: (result) => result && result.type === 'macro'
+                    },
+                    {
+                        name: 'range 宏使用',
+                        code: '[def total 0] [range [n from 1 to 6] [set total [+ total n]]] total',
+                        expected: 15
+                    },
+                    {
+                        name: 'for-in 宏定义',
+                        code: '[macro for-in [[item in list] & body] [q [do [def temp-list ~list] [while [not [null? temp-list]] [do [def ~item [first temp-list]] ~@body [set temp-list [rest temp-list]]]]]]]',
+                        expected: 'macro',
+                        compare: (result) => result && result.type === 'macro'
+                    },
+                    {
+                        name: 'for-in 宏遍历',
+                        code: '[def result []] [for-in [x in [list 10 20 30]] [set result [cons [* x 2] result]]] [reverse result]',
+                        expected: [20, 40, 60]
+                    },
+                    {
+                        name: '条件匹配宏',
+                        code: '[macro when-equals [[x equals y] & body] [q [if [= ~x ~y] [do ~@body] nil]]] [when-equals [5 equals 5] [print "Equal!"]]',
+                        expected: 'Equal!',
+                        compare: (result) => result === 'Equal!'
+                    },
+                    {
+                        name: '解构赋值宏',
+                        code: '[macro let-pair [[[a b] equals pair] & body] [q [do [def ~a [first ~pair]] [def ~b [first [rest ~pair]]] ~@body]]] [let-pair [[x y] equals [list 100 200]] [+ x y]]',
+                        expected: 300
+                    }
+                ];
+            }
+            
+            createAdvancedTests() {
+                return [
+                    {
+                        name: '递归阶乘',
+                        code: '[def factorial [fn [n] [cond [[= n 0] 1] [else [* n [factorial [- n 1]]]]]]] [factorial 6]',
+                        expected: 720
+                    },
+                    {
+                        name: '斐波那契数列',
+                        code: '[def fib [fn [n] [cond [[= n 0] 0] [[= n 1] 1] [else [+ [fib [- n 1]] [fib [- n 2]]]]]]] [fib 8]',
+                        expected: 21
+                    },
+                    {
+                        name: '闭包函数',
+                        code: '[def make-counter [fn [start] [fn [] [do [def current start] [set start [+ start 1]] current]]]] [def counter [make-counter 10]] [counter] [counter] [counter]',
+                        expected: 12
+                    },
+                    {
+                        name: '高阶函数 map',
+                        code: '[def map [fn [f lst] [cond [[null? lst] []] [else [cons [f [first lst]] [map f [rest lst]]]]]]] [map [fn [x] [* x x]] [list 1 2 3 4 5]]',
+                        expected: [1, 4, 9, 16, 25]
+                    },
+                    {
+                        name: '高阶函数 filter',
+                        code: '[def filter [fn [pred lst] [cond [[null? lst] []] [[pred [first lst]] [cons [first lst] [filter pred [rest lst]]]] [else [filter pred [rest lst]]]]]] [filter [fn [x] [> x 2]] [list 1 2 3 4 5]]',
+                        expected: [3, 4, 5]
+                    },
+                    {
+                        name: '数学函数 sqrt',
+                        code: '[sqrt 25]',
+                        expected: 5
+                    },
+                    {
+                        name: '数学函数 abs',
+                        code: '[abs -15]',
+                        expected: 15
+                    },
+                    {
+                        name: '数学函数 pow',
+                        code: '[pow 2 10]',
+                        expected: 1024
+                    },
+                    {
+                        name: '类型判断 number?',
+                        code: '[number? 123.45]',
+                        expected: true
+                    },
+                    {
+                        name: '类型判断 string?',
+                        code: '[string? "test"]',
+                        expected: true
+                    },
+                    {
+                        name: '类型判断 symbol?',
+                        code: '[symbol? x]',
+                        expected: true
+                    },
+                    {
+                        name: '字符串拼接',
+                        code: '[cat "Nexis" " " "Lisp" " " "v2.0"]',
+                        expected: 'Nexis Lisp v2.0'
+                    }
+                ];
+            }
+            
+            bindEvents() {
+                document.getElementById('run-all-btn').addEventListener('click', () => this.runAllTests());
+                document.getElementById('run-basic-btn').addEventListener('click', () => this.runCategoryTests('basic'));
+                document.getElementById('run-function-btn').addEventListener('click', () => this.runCategoryTests('functions'));
+                document.getElementById('run-control-btn').addEventListener('click', () => this.runCategoryTests('control'));
+                document.getElementById('run-list-btn').addEventListener('click', () => this.runCategoryTests('lists'));
+                document.getElementById('run-macro-btn').addEventListener('click', () => this.runCategoryTests('macros'));
+                document.getElementById('run-pattern-btn').addEventListener('click', () => this.runCategoryTests('pattern'));
+                document.getElementById('clear-btn').addEventListener('click', () => this.clearResults());
+                document.getElementById('clear-console-btn').addEventListener('click', () => this.clearConsole());
+                document.getElementById('copy-console-btn').addEventListener('click', () => this.copyConsole());
+                
+                // 点击测试项查看详情
+                document.addEventListener('click', (e) => {
+                    const testItem = e.target.closest('.test-item');
+                    if (testItem) {
+                        const testId = testItem.dataset.testId;
+                        this.showTestDetails(testId);
+                    }
+                });
+            }
+            
+            async runAllTests() {
+                if (this.isRunning) return;
+                
+                this.clearConsole();
+                this.log('info', '🚀 开始运行所有测试...');
+                this.log('info', `Nexis Lisp v2.0 特性测试套件`);
+                this.log('info', '='.repeat(50));
+                
+                this.isRunning = true;
+                this.testQueue = Object.keys(this.results.tests);
+                
+                await this.processTestQueue();
+                this.showSummary();
+                this.isRunning = false;
+            }
+            
+            async runCategoryTests(categoryId) {
+                if (this.isRunning) return;
+                
+                this.clearConsole();
+                this.log('info', `🚀 开始运行 ${categoryId} 分类测试...`);
+                
+                this.isRunning = true;
+                this.testQueue = Object.keys(this.results.tests)
+                    .filter(id => id.startsWith(categoryId));
+                
+                await this.processTestQueue();
+                this.showSummary();
+                this.isRunning = false;
+            }
+            
+            async processTestQueue() {
+                for (const testId of this.testQueue) {
+                    await this.runTest(testId);
+                    this.updateStats();
+                    await this.delay(50); // 稍微延迟，让UI有动画效果
+                }
+            }
+            
+            async runTest(testId) {
+                const test = this.results.tests[testId];
+                if (!test) return;
+                
+                this.currentTest = testId;
+                this.updateTestStatus(testId, 'running');
+                
+                this.log('test', `🧪 测试: ${test.name}`);
+                this.log('test', `  代码: ${test.code}`);
+                
+                try {
+                    const ast = this.parser.read(test.code);
+                    const result = this.evaluator.eval(ast);
+                    
+                    let success = false;
+                    if (test.compare) {
+                        success = test.compare(result);
+                    } else if (test.expected === 'function' || test.expected === 'macro') {
+                        success = typeof result === 'function' || (result && result.type === test.expected);
+                    } else if (Array.isArray(test.expected)) {
+                        success = JSON.stringify(result) === JSON.stringify(test.expected);
+                    } else {
+                        success = result === test.expected;
+                    }
+                    
+                    if (success) {
+                        this.results.passed++;
+                        this.updateTestStatus(testId, 'pass');
+                        this.log('success', `   ✅ 通过: ${JSON.stringify(result)}`);
+                        test.status = 'pass';
+                        test.result = result;
+                    } else {
+                        this.results.failed++;
+                        this.updateTestStatus(testId, 'fail');
+                        this.log('error', `   ❌ 失败: 期望 ${JSON.stringify(test.expected)}，得到 ${JSON.stringify(result)}`);
+                        test.status = 'fail';
+                        test.result = result;
+                    }
+                    
+                } catch (error) {
+                    this.results.failed++;
+                    this.updateTestStatus(testId, 'fail');
+                    this.log('error', `   💥 错误: ${error.message}`);
+                    test.status = 'fail';
+                    test.error = error.message;
+                }
+                
+                this.results.total++;
+                this.currentTest = null;
+            }
+            
+            updateTestStatus(testId, status) {
+                const element = document.getElementById(`test-${testId}`);
+                if (!element) return;
+                
+                const statusEl = element.querySelector('.test-status');
+                if (!statusEl) return;
+                
+                statusEl.innerHTML = '';
+                let icon = '';
+                
+                switch (status) {
+                    case 'running':
+                        statusEl.className = 'test-status status-running';
+                        icon = '<i class="fas fa-spinner fa-spin pulse"></i>';
+                        break;
+                    case 'pass':
+                        statusEl.className = 'test-status status-pass';
+                        icon = '<i class="fas fa-check-circle"></i>';
+                        break;
+                    case 'fail':
+                        statusEl.className = 'test-status status-fail';
+                        icon = '<i class="fas fa-times-circle"></i>';
+                        break;
+                    default:
+                        statusEl.className = 'test-status status-pending';
+                        icon = '<i class="fas fa-clock"></i>';
+                }
+                
+                statusEl.innerHTML = icon;
+            }
+            
+            updateStats() {
+                const total = this.results.total;
+                const passed = this.results.passed;
+                const failed = this.results.failed;
+                const successRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+                
+                document.getElementById('total-tests').textContent = total;
+                document.getElementById('passed-tests').textContent = passed;
+                document.getElementById('failed-tests').textContent = failed;
+                document.getElementById('success-rate').textContent = `${successRate}%`;
+                
+                const progress = total > 0 ? (passed / total * 100) : 0;
+                document.getElementById('progress-fill').style.width = `${progress}%`;
+            }
+            
+            showTestDetails(testId) {
+                const test = this.results.tests[testId];
+                if (!test) return;
+                
+                this.log('info', `📋 测试详情: ${test.name}`);
+                this.log('info', `分类: ${test.category}`);
+                this.log('info', `状态: ${test.status === 'pass' ? '✅ 通过' : test.status === 'fail' ? '❌ 失败' : '⏳ 待测试'}`);
+                this.log('info', `代码: ${test.code}`);
+                
+                if (test.result !== undefined) {
+                    this.log('info', `结果: ${JSON.stringify(test.result)}`);
+                }
+                
+                if (test.expected !== undefined) {
+                    this.log('info', `期望: ${JSON.stringify(test.expected)}`);
+                }
+                
+                if (test.error) {
+                    this.log('error', `错误: ${test.error}`);
+                }
+            }
+            
+            showSummary() {
+                const total = this.results.total;
+                const passed = this.results.passed;
+                const failed = this.results.failed;
+                const successRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+                
+                const summaryPanel = document.getElementById('summary-panel');
+                const resultEl = document.getElementById('summary-result');
+                const featureGrid = document.getElementById('feature-grid');
+                
+                summaryPanel.style.display = 'block';
+                
+                if (failed === 0 && total > 0) {
+                    resultEl.className = 'summary-result summary-success';
+                    resultEl.innerHTML = `
+                        <i class="fas fa-trophy"></i> 完美通过！
+                        <div style="font-size: 0.5em; margin-top: 10px; opacity: 0.8;">
+                            所有 ${total} 个测试全部通过
+                        </div>
+                    `;
+                } else if (successRate >= 80) {
+                    resultEl.className = 'summary-result summary-success';
+                    resultEl.innerHTML = `
+                        <i class="fas fa-check-circle"></i> 良好通过
+                        <div style="font-size: 0.5em; margin-top: 10px; opacity: 0.8;">
+                            通过率: ${successRate}% (${passed}/${total})
+                        </div>
+                    `;
+                } else {
+                    resultEl.className = 'summary-result summary-failure';
+                    resultEl.innerHTML = `
+                        <i class="fas fa-exclamation-triangle"></i> 需要改进
+                        <div style="font-size: 0.5em; margin-top: 10px; opacity: 0.8;">
+                            通过率: ${successRate}% | 通过: ${passed} | 失败: ${failed}
+                        </div>
+                    `;
+                }
+                
+                // 显示特性状态
+                const features = [
+                    { icon: 'fas fa-code', name: '基本语法', tests: this.getCategoryTests('basic') },
+                    { icon: 'fas fa-calculator', name: '运算函数', tests: this.getCategoryTests('functions') },
+                    { icon: 'fas fa-project-diagram', name: '控制流', tests: this.getCategoryTests('control') },
+                    { icon: 'fas fa-layer-group', name: '列表处理', tests: this.getCategoryTests('lists') },
+                    { icon: 'fas fa-expand-arrows-alt', name: '宏系统', tests: this.getCategoryTests('macros') },
+                    { icon: 'fas fa-shapes', name: '模式匹配', tests: this.getCategoryTests('pattern') },
+                    { icon: 'fas fa-rocket', name: '高级特性', tests: this.getCategoryTests('advanced') }
+                ];
+                
+                featureGrid.innerHTML = features.map(feat => {
+                    const passedTests = feat.tests.filter(t => t.status === 'pass').length;
+                    const totalTests = feat.tests.length;
+                    const rate = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
+                    
+                    return `
+                        <div class="feature-item">
+                            <i class="feature-icon ${feat.icon}"></i>
+                            <div style="flex: 1;">
+                                <div style="font-weight: bold;">${feat.name}</div>
+                                <div style="font-size: 0.8em; opacity: 0.8;">
+                                    ${passedTests}/${totalTests} (${rate}%)
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // 滚动到总结
+                summaryPanel.scrollIntoView({ behavior: 'smooth' });
+            }
+            
+            getCategoryTests(categoryId) {
+                return Object.values(this.results.tests)
+                    .filter(test => test.category === categoryId);
+            }
+            
+            clearResults() {
+                this.results = {
+                    total: 0,
+                    passed: 0,
+                    failed: 0,
+                    tests: {}
+                };
+                
+                // 重置所有测试状态
+                Object.keys(this.results.tests).forEach(testId => {
+                    this.updateTestStatus(testId, 'pending');
+                });
+                
+                this.updateStats();
+                this.clearConsole();
+                this.log('info', '测试结果已清除');
+                
+                document.getElementById('summary-panel').style.display = 'none';
+                
+                // 重新创建测试数据
+                this.createTestCategories();
+            }
+            
+            clearConsole() {
+                const consoleEl = document.getElementById('console-output');
+                consoleEl.innerHTML = '<div class="console-line info">控制台已清空</div>';
+            }
+            
+            copyConsole() {
+                const consoleEl = document.getElementById('console-output');
+                const text = consoleEl.textContent;
+                navigator.clipboard.writeText(text).then(() => {
+                    this.log('info', '控制台内容已复制到剪贴板');
+                });
+            }
+            
+            log(type, message) {
+                const consoleEl = document.getElementById('console-output');
+                const line = document.createElement('div');
+                line.className = `console-line ${type}`;
+                line.textContent = message;
+                consoleEl.appendChild(line);
+                consoleEl.scrollTop = consoleEl.scrollHeight;
+            }
+            
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+        
+        // 初始化测试套件
+        document.addEventListener('DOMContentLoaded', () => {
+            window.testSuite = new NexisTestSuite();
+            console.log('Nexis Lisp 测试套件已初始化');
+        });
+    </script>
+</body>
+</html>

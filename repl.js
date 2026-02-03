@@ -109,7 +109,7 @@ class REPL {
             const ast = parser.read(code);
             
             // 调试信息
-            console.log('解析结果:', ast);
+            console.log('解析结果REF:', ast);
             
             const result = this.evaluator.eval(ast);
             
