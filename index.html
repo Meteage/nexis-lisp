@@ -104,6 +104,14 @@
 						<code>[infix 1 + 2]</code>
 						<span>使用中缀宏</span>
 					</div>
+				   <div class="example" data-code="[macro for [[var in seq] & body] [q [do [def temp-seq ~seq] [while [not [null? temp-seq]] [def ~var [first temp-seq]] ~@body [set temp-seq [rest temp-seq]] ] null ] ] ]">
+						<code>[macro for ...]</code>
+						<span>定义 for 宏</span>
+				   </div>
+				   <div class="example" data-code="[for [n in [list 1 2 3]] [print n]]">
+						<code>[for ...]</code>
+						<span>使用 for 宏</span>
+				   </div>
 					<div class="example"
 						data-code="[macro and [& forms] [if [null? forms] true [if [= [len forms] 1] [first forms] [q [if ~(first forms) [and ~@(rest forms)] false]]]]]">
 						<code>[macro and ...]</code>
